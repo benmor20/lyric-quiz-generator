@@ -130,3 +130,7 @@ dmypy.json
 
 # PyCharm
 .idea/
+
+# Credentials
+src/client_id.txt
+src/client_secret.txt
