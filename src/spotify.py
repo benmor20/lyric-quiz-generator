@@ -53,7 +53,7 @@ class Spotify:
         res = res.json()
         if "error" in res:
             return res
-        print(json.dumps(res))
+        # print(json.dumps(res))
         return res['tracks']
 
     def query(self, name: Optional[str] = None, type: str = 'track', limit: int = 500, **kwargs):
@@ -84,31 +84,37 @@ class Spotify:
     def _response_from_url(self, url):
         res = requests.get(url, headers=self.headers)
         res = res.json()
-        if "error" in res:
-            return res
-        print(json.dumps(res))
-        while True:
-            if isinstance(res, list):
-                if len(res) == 0:
-                    return []
-                if isinstance(res[0], dict) and 'track' in res[0]:
-                    return [r['track'] for r in res]
-                return res
-            elif 'items' in res:
-                res = res['items']
-            elif 'tracks' in res:
-                res = res['tracks']
-            else:
-                raise ValueError('Uh no fucken clue dude')
+        return res
 
     def query_from_url(self, url, limit: int = 500):
         response = self._get_response(lambda: self._response_from_url(url))
+        # assert 'next' in response
 
         # Check that GET request doesn't return empty.
         if response is None or len(response) == 0:
             return None
 
-        return self._add_next(response, response, max_amount=limit)
+        # Extract the tracks
+        # print(json.dumps(response))
+        og_response = response.copy()
+        tracks = []
+        while True:
+            if isinstance(response, list):
+                if len(response) == 0:
+                    break
+                if isinstance(response[0], dict) and 'track' in response[0]:
+                    tracks = [r['track'] for r in response]
+                    break
+                tracks = response
+                break
+            elif 'items' in response:
+                response = response['items']
+            elif 'tracks' in response:
+                response = response['tracks']
+            else:
+                raise ValueError('Uh no fucken clue dude')
+
+        return self._add_next(tracks, og_response, max_amount=limit)
 
     def tracks_from_playlist(self, playlist_id):
         response = self._get_response(lambda: requests.get(f'{PLAYLIST_URL}/{playlist_id}/tracks', headers=self.headers).json())
@@ -122,13 +128,22 @@ class Spotify:
 
     def _add_next(self, results, response, max_amount=500):
         if len(results) >= max_amount:
+            print(f'hit max amount')
             return results
-        if 'next' in response and response['next']:
-            nxt = self.query_from_url(response['next'], limit=max_amount-len(results))
-            if nxt:
-                try:
+        while 'tracks' in response or 'items' in response or 'next' in response:
+            if 'next' in response and response['next']:
+                print('Fetching next')
+                nxt = self.query_from_url(response['next'], limit=max_amount-len(results))
+                print(f'OG: {len(results)}')
+                print(f'Next: {len(nxt)}')
+                if nxt:
                     results.extend(nxt)
-                except KeyError as e:
-                    print(json.dumps(results))
-                    raise e
-        return results
+                    return results
+                else:
+                    print('no more songs')
+            elif 'tracks' in response:
+                response = response['tracks']
+            else:
+                response = response['items']
+        print('no more songs (2)')
+        return None

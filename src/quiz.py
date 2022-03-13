@@ -1,4 +1,4 @@
-import _io
+import json
 
 from lyrics import *
 from spotify import Spotify
@@ -12,10 +12,12 @@ def generate_quiz(nsongs: int, spotify: Optional[Spotify] = None, min_popularity
         response = spotify.tracks_from_playlist(kwargs['playlist'])
     else:
         response = spotify.query(**kwargs)
-    # print(response)
+    print(json.dumps(response))
+    print(f'Got {len(response)} tracks')
     random.shuffle(response)
     if min_popularity > 0:
         response = [r for r in response if 'popularity' in r and r['popularity'] > min_popularity]
+        print(f'Popularity filtered down to {len(response)} tracks')
 
     answer_key = {}
     for i, song in enumerate(response):

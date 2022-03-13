@@ -2,16 +2,16 @@ import bs4 as bs
 import requests
 import random
 from typing import *
-from datetime import date
-
-from spotify import Spotify
 
 
 def get_full_lyrics(title: str, artist: str):
     # Create URL
     if ' (' in title:
         title = title.split(' (')[0]
+    if ' -' in title:
+        title = title.split(' -')[0]
     title = clean_phrase(title)
+    artist = clean_phrase(artist)
     title_dashed = '-'.join(title.lower().split(' '))
     artist_dashed = '-'.join(artist.lower().split(' '))
     lyric_subdomain = '-'.join([artist_dashed, title_dashed, 'lyrics'])
@@ -48,15 +48,20 @@ def remove_chorus(lyrics):
 def random_lyrics(title: str, artist: str, max_attempts: int = 50):
     no_chorus = remove_chorus(get_full_lyrics(title, artist))
     if len(no_chorus) == 0:
+        print(f'Could not find lyrics for {title} by {artist}')
         return None
     lines = no_chorus.split('\n')
+    if len(lines) == 1:
+        print(f'One line song for {title} by {artist}')
+        return None
     lyrics = title.lower()
     attempt_num = 0
-    while has_overlap(title, lyrics) or num_words(lyrics) <= 5:
+    while has_overlap(title, lyrics) or num_words(lyrics) <= 6:
         line_start = random.randrange(len(lines) - 1)
         lyrics = lines[line_start].replace('\\u2005', ' ').replace('\u2005', ' ')
         attempt_num += 1
         if attempt_num >= max_attempts:
+            print(f'Could not find appropriate line for {title} by {artist}')
             return None
     return lyrics
 
@@ -76,9 +81,22 @@ def words_from_lyrics(lyrics):
 
 
 def clean_phrase(phrase):
-    phrase = phrase.lower().replace('\n', ' ')
-    phrase = phrase.replace('\u2005', ' ')
-    phrase = phrase.replace('\\u2005', ' ')
-    for c in '.,!?-:()':
-        phrase = phrase.replace(c, '')
+    replacements = {'\n': ' ',
+                    '\u2005': ' ',
+                    '\\u2005': ' ',
+                    '&': 'and',
+                    '.': '',
+                    ',': '',
+                    '!': '',
+                    '?': '',
+                    '-': ' ',
+                    ':': '',
+                    '(': '',
+                    ')': '',
+                    '\'': '',
+                    '"': '',
+                    '/': ' '}
+    phrase = phrase.lower()
+    for target, replace in replacements.items():
+        phrase = phrase.replace(target, replace)
     return phrase
