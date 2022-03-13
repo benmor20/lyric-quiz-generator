@@ -54,7 +54,7 @@ def random_lyrics(title: str, artist: str, max_attempts: int = 50):
     attempt_num = 0
     while has_overlap(title, lyrics) or num_words(lyrics) <= 5:
         line_start = random.randrange(len(lines) - 1)
-        lyrics = lines[line_start]
+        lyrics = lines[line_start].replace('\\u2005', ' ').replace('\u2005', ' ')
         attempt_num += 1
         if attempt_num >= max_attempts:
             return None

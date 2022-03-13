@@ -12,7 +12,7 @@ def to_rel_file(path):
 
 def main():
     playlist_id = '5UX8aaotKbCmjdrEkbhp5h'
-    answer_key = generate_quiz(20, artist='Taylor Swift', min_popularity=60)
+    answer_key = generate_quiz(50, playlist=playlist_id)
     print(answer_key)
     with open(to_rel_file('lyric_test.txt'), 'w') as test_file:
         with open(to_rel_file('lyric_test_answers.txt'), 'w') as answer_file:
