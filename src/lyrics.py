@@ -9,6 +9,9 @@ from spotify import Spotify
 
 def get_full_lyrics(title: str, artist: str):
     # Create URL
+    if ' (' in title:
+        title = title.split(' (')[0]
+    title = clean_phrase(title)
     title_dashed = '-'.join(title.lower().split(' '))
     artist_dashed = '-'.join(artist.lower().split(' '))
     lyric_subdomain = '-'.join([artist_dashed, title_dashed, 'lyrics'])
@@ -33,6 +36,8 @@ def remove_chorus(lyrics):
     no_chorus = []
     in_chorus = False
     for line in lyrics.split('\n'):
+        if len(line) == 0:
+            continue
         if line[0] == '[':
             in_chorus = 'Chorus' in line
         elif not in_chorus:
@@ -42,6 +47,8 @@ def remove_chorus(lyrics):
 
 def random_lyrics(title: str, artist: str):
     no_chorus = remove_chorus(get_full_lyrics(title, artist))
+    if len(no_chorus) == 0:
+        return None
     lines = no_chorus.split('\n')
     lyrics = title.lower()
     while has_overlap(title, lyrics) or num_words(lyrics) <= 5:
@@ -61,7 +68,11 @@ def num_words(lyrics):
 
 
 def words_from_lyrics(lyrics):
-    lyrics = lyrics.lower().replace('\n', ' ')
+    return clean_phrase(lyrics).split(' ')
+
+
+def clean_phrase(phrase):
+    phrase = phrase.lower().replace('\n', ' ')
     for c in '.,!?-:()':
-        lyrics = lyrics.replace(c, '')
-    return lyrics.split(' ')
+        phrase = phrase.replace(c, '')
+    return phrase

@@ -1,16 +1,17 @@
+import json
+import os
+
 from spotify import Spotify
 from lyrics import *
 
 
 def main():
-    title = '1985'
-    artist = 'Bowling For Soup'
-    full = get_full_lyrics(title, artist)
-    no_chorus = remove_chorus(full)
-    print()
-    print(no_chorus)
-    print()
-    print(random_lyrics(title, artist))
+    playlist_id = '6MGdpQKVoZYFj9RZkcxcRw'
+    spotify = Spotify()
+    res = spotify.tracks_from_playlist(playlist_id)
+    path = os.sep.join([os.path.relpath(__file__), '..', 'results.json'])
+    with open(path, 'w') as results:
+        results.write(json.dumps(res))
 
 
 if __name__ == '__main__':

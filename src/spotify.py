@@ -1,4 +1,5 @@
 import os
+from typing import *
 
 import requests
 import time
@@ -6,6 +7,7 @@ import time
 
 BASE_URL = 'https://api.spotify.com/v1'
 SEARCH_URL = f'{BASE_URL}/search'
+PLAYLIST_URL = f'{BASE_URL}/playlists'
 
 
 class Spotify:
@@ -26,29 +28,72 @@ class Spotify:
         })
         auth_response_data = auth_response.json()
         access_token = auth_response_data['access_token']
+        print(access_token)
 
         # Set headers
         self.headers = {
-            'Authorization': f'Bearer {access_token}'
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
         }
 
-    def query(self, q, type=None):
+    @staticmethod
+    def _get_response(response_func):
+        response = response_func()
+        while 'status_code' in response and response['status_code'] != 200:
+            print(f"Failed Spotify Request: {response.status_code}")
+            time.sleep(1)
+            response = response_func()
+        return response
+
+    def query(self, name: Optional[str] = None, type: str = 'track', limit: int = 1000, **kwargs):
         # Set params
-        params = {'q': q,
-                  'limit': 1}
+        params = {}
+        if name:
+            params['q'] = name
+        rem_params = ' '.join(f'{k}:{v}' for k, v in kwargs.items())
+        if 'q' in params:
+            params['q'] += f' {rem_params}'
+        else:
+            params['q'] = rem_params
+
         if type is not None:
             params['type'] = type
+        if limit:
+            params['limit'] = limit
+        print(params)
+        assert len(params) > 0
 
         # Get response
-        response = requests.get(SEARCH_URL, params=params, headers=self.headers)
-        while response.status_code != 200:
-            print("Failed Spotify Request")
-            time.sleep(1)
-            response = requests.get(SEARCH_URL, params=params, headers=self.headers)
-        response = response.json()
+        response = self._get_response(lambda: requests.get(SEARCH_URL, params=params, headers=self.headers).json()['tracks'])
 
         # Check that GET request doesn't return empty.
-        if len(response["tracks"]["items"]) == 0:
+        if len(response['items']) == 0:
             return None
 
-        return response
+        return self._add_next(response['items'], response)
+
+    def query_from_url(self, url):
+        response = self._get_response(lambda: requests.get(url, headers=self.headers).json()['tracks'])
+
+        # Check that GET request doesn't return empty.
+        if len(response['items']) == 0:
+            return None
+
+        return self._add_next(response['items'], response)
+
+    def tracks_from_playlist(self, playlist_id):
+        response = self._get_response(lambda: requests.get(f'{PLAYLIST_URL}/{playlist_id}/tracks', headers=self.headers).json())
+
+        # Check that GET request doesn't return empty.
+        if len(response['items']) == 0:
+            return None
+
+        return self._add_next(response['items'], response)
+
+    def _add_next(self, results, response):
+        if 'next' in response and response['next']:
+            nxt = self.query_from_url(response['next'])
+            if nxt:
+                results.extend(nxt)
+        return results
