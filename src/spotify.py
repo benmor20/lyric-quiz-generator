@@ -1,3 +1,4 @@
+import json
 import os
 from typing import *
 
@@ -28,7 +29,6 @@ class Spotify:
         })
         auth_response_data = auth_response.json()
         access_token = auth_response_data['access_token']
-        print(access_token)
 
         # Set headers
         self.headers = {
@@ -40,13 +40,23 @@ class Spotify:
     @staticmethod
     def _get_response(response_func):
         response = response_func()
-        while 'status_code' in response and response['status_code'] != 200:
-            print(f"Failed Spotify Request: {response.status_code}")
+        while 'error' in response:
+            print(f"Failed Spotify Request: {response['error']['status']}, {response['error']['message']}")
+            if response['error']['status'] == 404:
+                return None
             time.sleep(1)
             response = response_func()
         return response
 
-    def query(self, name: Optional[str] = None, type: str = 'track', limit: int = 1000, **kwargs):
+    def _response_from_query(self, url, params):
+        res = requests.get(url, params=params, headers=self.headers)
+        res = res.json()
+        if "error" in res:
+            return res
+        print(json.dumps(res))
+        return res['tracks']
+
+    def query(self, name: Optional[str] = None, type: str = 'track', limit: int = 500, **kwargs):
         # Set params
         params = {}
         if name:
@@ -59,41 +69,66 @@ class Spotify:
 
         if type is not None:
             params['type'] = type
-        if limit:
-            params['limit'] = limit
         print(params)
         assert len(params) > 0
 
         # Get response
-        response = self._get_response(lambda: requests.get(SEARCH_URL, params=params, headers=self.headers).json()['tracks'])
+        response = self._get_response(lambda: self._response_from_query(SEARCH_URL, params))
 
         # Check that GET request doesn't return empty.
-        if len(response['items']) == 0:
+        if response is None or len(response['items']) == 0:
             return None
 
-        return self._add_next(response['items'], response)
+        return self._add_next(response['items'], response, max_amount=limit)
 
-    def query_from_url(self, url):
-        response = self._get_response(lambda: requests.get(url, headers=self.headers).json()['tracks'])
+    def _response_from_url(self, url):
+        res = requests.get(url, headers=self.headers)
+        res = res.json()
+        if "error" in res:
+            return res
+        print(json.dumps(res))
+        while True:
+            if isinstance(res, list):
+                if len(res) == 0:
+                    return []
+                if isinstance(res[0], dict) and 'track' in res[0]:
+                    return [r['track'] for r in res]
+                return res
+            elif 'items' in res:
+                res = res['items']
+            elif 'tracks' in res:
+                res = res['tracks']
+            else:
+                raise ValueError('Uh no fucken clue dude')
+
+    def query_from_url(self, url, limit: int = 500):
+        response = self._get_response(lambda: self._response_from_url(url))
 
         # Check that GET request doesn't return empty.
-        if len(response['items']) == 0:
+        if response is None or len(response) == 0:
             return None
 
-        return self._add_next(response['items'], response)
+        return self._add_next(response, response, max_amount=limit)
 
     def tracks_from_playlist(self, playlist_id):
         response = self._get_response(lambda: requests.get(f'{PLAYLIST_URL}/{playlist_id}/tracks', headers=self.headers).json())
+        tracks = [r['track'] for r in response['items']]
 
         # Check that GET request doesn't return empty.
-        if len(response['items']) == 0:
+        if len(tracks) == 0:
             return None
 
-        return self._add_next(response['items'], response)
+        return self._add_next(tracks, response)
 
-    def _add_next(self, results, response):
+    def _add_next(self, results, response, max_amount=500):
+        if len(results) >= max_amount:
+            return results
         if 'next' in response and response['next']:
-            nxt = self.query_from_url(response['next'])
+            nxt = self.query_from_url(response['next'], limit=max_amount-len(results))
             if nxt:
-                results.extend(nxt)
+                try:
+                    results.extend(nxt)
+                except KeyError as e:
+                    print(json.dumps(results))
+                    raise e
         return results

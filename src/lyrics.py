@@ -45,15 +45,19 @@ def remove_chorus(lyrics):
     return '\n'.join(no_chorus)
 
 
-def random_lyrics(title: str, artist: str):
+def random_lyrics(title: str, artist: str, max_attempts: int = 50):
     no_chorus = remove_chorus(get_full_lyrics(title, artist))
     if len(no_chorus) == 0:
         return None
     lines = no_chorus.split('\n')
     lyrics = title.lower()
+    attempt_num = 0
     while has_overlap(title, lyrics) or num_words(lyrics) <= 5:
         line_start = random.randrange(len(lines) - 1)
         lyrics = lines[line_start]
+        attempt_num += 1
+        if attempt_num >= max_attempts:
+            return None
     return lyrics
 
 
@@ -73,6 +77,8 @@ def words_from_lyrics(lyrics):
 
 def clean_phrase(phrase):
     phrase = phrase.lower().replace('\n', ' ')
+    phrase = phrase.replace('\u2005', ' ')
+    phrase = phrase.replace('\\u2005', ' ')
     for c in '.,!?-:()':
         phrase = phrase.replace(c, '')
     return phrase
