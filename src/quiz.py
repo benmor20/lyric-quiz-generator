@@ -30,7 +30,7 @@ def generate_quiz(nsongs: int, spotify: Optional[Spotify] = None, min_popularity
         artist = ', '.join(artists)
 
         # Create lyrics
-        lyrics = random_lyrics(title, artists[0])
+        lyrics = random_lyrics(song)
         if lyrics is not None:
             answer_key[lyrics] = (title, artist)
             print(f'{len(answer_key)}/{nsongs}')

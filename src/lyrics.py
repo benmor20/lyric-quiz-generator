@@ -3,27 +3,27 @@ import requests
 import random
 from typing import *
 
+from song import *
 
-def get_full_lyrics(title: str, artist: str):
-    # Create URL
-    if ' (' in title:
-        title = title.split(' (')[0]
-    if ' -' in title:
-        title = title.split(' -')[0]
-    title = standardize_phrase(title)
-    artist = standardize_phrase(artist)
-    title_dashed = '-'.join(title.lower().split(' '))
-    artist_dashed = '-'.join(artist.lower().split(' '))
-    lyric_subdomain = '-'.join([artist_dashed, title_dashed, 'lyrics'])
-    url = f'https://genius.com/{lyric_subdomain}'
 
-    # Get soup
-    # print(f'url is {url}')
-    page = requests.get(url)
-    soup = bs.BeautifulSoup(page.text, 'html.parser')
-    # print(soup.prettify())
+def get_full_lyrics(song):
+    for title, artist in title_and_artist_pairs_from_song(song):
+        # Create URL
+        title_dashed = '-'.join(title.lower().split(' '))
+        artist_dashed = '-'.join(artist.lower().split(' '))
+        lyric_subdomain = '-'.join([artist_dashed, title_dashed, 'lyrics'])
+        url = f'https://genius.com/{lyric_subdomain}'
 
-    return lyrics_from_soup(soup)
+        # Get soup
+        page = requests.get(url)
+        if page.status_code != 200:
+            continue
+        soup = bs.BeautifulSoup(page.text, 'html.parser')
+
+        lyrics = lyrics_from_soup(soup)
+        if len(lyrics) > 0:
+            # print(f'Song is {title}, artist is {artist}')
+            return lyrics
 
 
 def lyrics_from_soup(soup):
@@ -33,6 +33,8 @@ def lyrics_from_soup(soup):
 
 
 def remove_chorus(lyrics):
+    if lyrics is None or len(lyrics) == 0:
+        return None
     no_chorus = []
     skip = False
     for line in lyrics.split('\n'):
@@ -45,14 +47,16 @@ def remove_chorus(lyrics):
     return '\n'.join(no_chorus)
 
 
-def random_lyrics(title: str, artist: str, max_attempts: int = 50):
-    no_chorus = remove_chorus(get_full_lyrics(title, artist))
-    if len(no_chorus) == 0:
-        print(f'Could not find lyrics for {title} by {artist}')
+def random_lyrics(song, max_attempts: int = 50):
+    title = song['name']
+    artists = ', '.join(a['name'] for a in song['artists'])
+    no_chorus = remove_chorus(get_full_lyrics(song))
+    if no_chorus is None or len(no_chorus) == 0:
+        print(f'Could not find lyrics for {title} by {artists}')
         return None
     lines = no_chorus.split('\n')
     if len(lines) == 1:
-        print(f'One line song for {title} by {artist}')
+        print(f'One line song for {title} by {artists}')
         return None
     lyrics = title.lower()
     attempt_num = 0
@@ -61,7 +65,7 @@ def random_lyrics(title: str, artist: str, max_attempts: int = 50):
         lyrics = clean_phrase(lines[line_start])
         attempt_num += 1
         if attempt_num >= max_attempts:
-            print(f'Could not find appropriate line for {title} by {artist}')
+            print(f'Could not find appropriate line for {title} by {artists}')
             return None
     return lyrics
 
@@ -78,33 +82,3 @@ def num_words(lyrics):
 
 def words_from_lyrics(lyrics):
     return standardize_phrase(lyrics).split(' ')
-
-
-def standardize_phrase(phrase):
-    replacements = {'\n': ' ',
-                    '&': 'and',
-                    '.': '',
-                    ',': '',
-                    '!': '',
-                    '?': '',
-                    '-': ' ',
-                    ':': '',
-                    '(': '',
-                    ')': '',
-                    '\'': '',
-                    '"': '',
-                    '/': ' ',
-                    '+': ' ',
-                    '#': ''}
-    phrase = clean_phrase(phrase.lower())
-    for target, replace in replacements.items():
-        phrase = phrase.replace(target, replace)
-    return phrase
-
-
-def clean_phrase(phrase):
-    replacements = {'\u2005': ' ',
-                    '\u0435': 'e'}
-    for target, replace in replacements.items():
-        phrase = phrase.replace(target, replace)
-    return phrase

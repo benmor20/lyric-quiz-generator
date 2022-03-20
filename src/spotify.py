@@ -46,14 +46,13 @@ class Spotify:
                 return None
             time.sleep(1)
             response = response_func()
-        return response
+        return response.json() if isinstance(response, requests.Response) else response
 
     def _response_from_query(self, url, params):
         res = requests.get(url, params=params, headers=self.headers)
-        res = res.json()
-        if "error" in res:
+        if 'error' in res:
             return res
-        # print(json.dumps(res))
+        res = res.json()
         return res['tracks']
 
     def query(self, name: Optional[str] = None, type: str = 'track', limit: int = 500, **kwargs):
@@ -83,8 +82,10 @@ class Spotify:
 
     def _response_from_url(self, url):
         res = requests.get(url, headers=self.headers)
-        res = res.json()
-        return res
+        try:
+            return res.json()
+        except json.decoder.JSONDecodeError:
+            return res
 
     def query_from_url(self, url, limit: int = 500):
         response = self._get_response(lambda: self._response_from_url(url))
@@ -124,7 +125,7 @@ class Spotify:
         if len(tracks) == 0:
             return None
 
-        return self._add_next(tracks, response)
+        return self._add_next(tracks, response, max_amount=1000000)
 
     def _add_next(self, results, response, max_amount=500):
         if len(results) >= max_amount:

@@ -1,8 +1,11 @@
 import json
 import os
 
+import requests
+
 from spotify import Spotify
 from lyrics import *
+from song import *
 from quiz import *
 
 
@@ -11,8 +14,8 @@ def to_rel_file(path):
 
 
 def main():
-    playlist_id = ''
-    answer_key = generate_quiz(5, album='Hamilton (Original Broadway Cast Recording)', limit=60)
+    playlist_id = '4CCu21yjMswqBGwMnEsjbu'
+    answer_key = generate_quiz(100, playlist=playlist_id)
     print(answer_key)
     with open(to_rel_file('lyric_test.txt'), 'w', encoding='utf-8') as test_file:
         with open(to_rel_file('lyric_test_answers.txt'), 'w', encoding='utf-8') as answer_file:
