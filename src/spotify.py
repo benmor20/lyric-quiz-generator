@@ -134,16 +134,16 @@ class Spotify:
             if 'next' in response and response['next']:
                 print('Fetching next')
                 nxt = self.query_from_url(response['next'], limit=max_amount-len(results))
-                print(f'OG: {len(results)}')
-                print(f'Next: {len(nxt)}')
                 if nxt:
+                    print(f'OG: {len(results)}')
+                    print(f'Next: {len(nxt)}')
                     results.extend(nxt)
-                    return results
+                    break
                 else:
-                    print('no more songs')
+                    break
             elif 'tracks' in response:
                 response = response['tracks']
             else:
                 response = response['items']
-        print('no more songs (2)')
-        return None
+        print('no more songs')
+        return results

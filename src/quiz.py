@@ -12,6 +12,9 @@ def generate_quiz(nsongs: int, spotify: Optional[Spotify] = None, min_popularity
         response = spotify.tracks_from_playlist(kwargs['playlist'])
     else:
         response = spotify.query(**kwargs)
+    if response is None:
+        print('No songs found')
+        return
     print(json.dumps(response))
     print(f'Got {len(response)} tracks')
     random.shuffle(response)
@@ -42,5 +45,5 @@ def export_to_files(test_file, answer_file, answer_key):
     headers = 'Lyric|Song|Artist\n'
     test_file.write(headers)
     answer_file.write(headers)
-    test_file.writelines(f'{lyric}||\n' for lyric in answer_key)
-    answer_file.writelines(f'{l}|{t}|{a}\n' for l, (t, a) in answer_key.items())
+    test_file.writelines((f'{lyric}||\n' for lyric in answer_key))
+    answer_file.writelines((f'{l}|{t}|{a}\n' for l, (t, a) in answer_key.items()))
