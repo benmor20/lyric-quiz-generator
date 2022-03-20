@@ -7,6 +7,8 @@ from song import *
 
 
 def get_full_lyrics(song):
+    if song is None:
+        return
     for title, artist in title_and_artist_pairs_from_song(song):
         # Create URL
         title_dashed = '-'.join(title.lower().split(' '))
