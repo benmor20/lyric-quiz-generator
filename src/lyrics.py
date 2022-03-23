@@ -34,19 +34,29 @@ def lyrics_from_soup(soup):
     return lyrics
 
 
+def split_lyrics(lyrics):
+    lines = lyrics.split('\n')
+    res = []
+    cur_section = None
+    cur_lyrics = []
+    for line in lines:
+        if line[0] == '[':
+            if len(cur_lyrics) > 0:
+                res.append((cur_section, cur_lyrics))
+            cur_section = line[1:-1].lower()
+            cur_lyrics = []
+            continue
+        cur_lyrics.append(line)
+    if len(cur_lyrics) > 0:
+        res.append((cur_section, cur_lyrics))
+    return res
+
+
 def remove_chorus(lyrics):
     if lyrics is None or len(lyrics) == 0:
         return None
-    no_chorus = []
-    skip = False
-    for line in lyrics.split('\n'):
-        if len(line) == 0 or (line[0] == '(' and line[-1] == ')'):
-            continue
-        if line[0] == '[':
-            skip = line[1:-1] == 'Chorus' or 'Album' in line
-        elif not skip:
-            no_chorus.append(line)
-    return '\n'.join(no_chorus)
+    splt = split_lyrics(lyrics)
+    return [l for s, l in splt if s is None or (s != 'chorus' and 'album' not in s)]
 
 
 def random_lyrics(song, max_attempts: int = 50):
@@ -56,17 +66,18 @@ def random_lyrics(song, max_attempts: int = 50):
     if no_chorus is None or len(no_chorus) == 0:
         print(f'Could not find lyrics for {title} by {artists}')
         return None
-    lines = no_chorus.split('\n')
-    if len(lines) == 1:
-        print(f'One line song for {title} by {artists}')
-        return None
     lyrics = title.lower()
     attempt_num = 0
     while has_overlap(title, lyrics) or num_words(lyrics) <= 6:
-        line_start = random.randrange(len(lines) - 1)
+        lines = random.choice(no_chorus)
+        line_start = random.randrange(len(lines))
         lyrics = clean_phrase(lines[line_start])
+        if num_words(lyrics) <= 6 and line_start < len(lines) - 1:
+            nxt = clean_phrase(lines[line_start + 1])
+            lyrics += ' / ' + nxt
+
         attempt_num += 1
-        if attempt_num >= max_attempts:
+        if attempt_num > max_attempts:
             print(f'Could not find appropriate line for {title} by {artists}')
             return None
     return lyrics

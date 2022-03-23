@@ -5,7 +5,7 @@ def possible_titles(title):
     titles = [title]
     if ' (' in title:
         start, end = title.find(' (') + 1, title.find(') ')
-        titles.append(title[:start - 1])
+        titles.insert(0, title[:start - 1])
         parens = title[start + 1:end].lower()
         if not ('ft.' in parens or 'feat.' in parens or 'featuring' in parens):
             titles.append(parens)
@@ -22,7 +22,14 @@ def possible_artists(artists):
     def key(a):
         l = len(a.split(', '))
         return 1.5 if l == longest else l
-    return sorted(poss_names, key=key)
+    srtd = sorted(poss_names, key=key)
+
+    if len(artists) >= 2:
+        for pair in names_split:
+            if len(pair) != 2:
+                continue
+            srtd.append(' and '.join(pair))
+    return srtd
 
 
 def _possible_artists(artists):
@@ -63,9 +70,10 @@ REPLACEMENTS = {
     '&': ['and', ' and ', ' '],
     '.': [''],
     ',': [''],
-    '!': [''],
+    '!': ['', ' '],  # space because some P!nk songs have url p-nk-...
     '?': [''],
     '-': [' ', ''],
+    '–': [' ', ''],
     ':': [''],
     '(': [''],
     ')': [''],
@@ -73,8 +81,10 @@ REPLACEMENTS = {
     '"': [''],
     '´': [''],
     '/': [' '],
+    '\\': [' '],
     '+': [' '],
     '#': [''],
+    '$': ['s', ' ', ''],  # different conventions for ke$ha, a$ap rocky, and $uicideboy$ (hopefully covers all cases)
     'à': ['a', '', 'à'],
     'á': ['a', '', 'á'],
     'â': ['a', '', 'â'],

@@ -138,3 +138,6 @@ src/client_secret.txt
 # Output files
 lyric_test.txt
 lyric_test_answers.txt
+
+# Testing
+src/testing.py
